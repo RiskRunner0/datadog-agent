@@ -1,0 +1,39 @@
+name: Validate ARM64 USM fallback cleanup
+
+on:
+  push:
+    branches:
+      - matt.smith/validate-arch-flake
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    env:
+      GOPATH: /home/runner/go
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+
+      - name: Install dda
+        uses: ./.github/actions/install-dda
+        with:
+          features: legacy-tasks
+
+      - name: Run the cleanup regression 20 times
+        run: >-
+          dda inv -e system-probe.test
+          --packages=./pkg/network/usm
+          --run='^TestRuntimeFallbackCleanupDoesNotContaminateArchDetection$'
+          --extra-arguments='-count=20'
